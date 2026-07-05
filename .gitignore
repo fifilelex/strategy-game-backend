@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+.venv/
+.env
+
+# Python cache
+__pycache__/
+/.pytest_cache
+
+# Test files
+tests/
+
+# Repository_dumping
+repository_dump.txt
+save.py
+save_structure.py
+
+# Styling files
+.pre-commit-config.yaml
+pyproject.toml
+
