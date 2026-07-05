@@ -1,41 +1,41 @@
 from dataclasses import dataclass
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IncomeSource(BaseModel):
-    id_gamestate: int
-    id: int
-    name: str
-    income: int
-    cost: int
+    id_gamestate: int = Field(..., ge=0)
+    id: int = Field(..., ge=0)
+    name: str = Field(..., min_length=1)
+    income: int = Field(..., gt=0)
+    cost: int = Field(..., gt=0)
     description: str = ""
 
 
 class IncomeSourceCreate(BaseModel, extra="forbid"):
 
-    name: str
-    income: int
-    cost: int
+    name: str = Field(..., min_length=1)
+    income: int = Field(..., gt=0)
+    cost: int = Field(..., gt=0)
     description: str = ""
 
 
 class IncomeSourceUpdate(BaseModel, extra="forbid"):
 
-    name: str | None = None
-    income: int | None = None
-    cost: int | None = None
-    description: str | None = None
+    name: str | None = Field(default=None, min_length=1)
+    income: int | None = Field(default=None, gt=0)
+    cost: int | None = Field(default=None, gt=0)
+    description: str | None = Field(default=None, min_length=1)
 
 
 @dataclass
 class GameState:  # game_data
-    uid: int
-    username: str
-    turn: int
-    money: int
-    income: int
-    is_active: bool
+    uid: int = Field(..., ge=0)
+    username: str = Field(..., min_length=1)
+    turn: int = Field(..., gt=0)
+    money: int = Field(..., ge=0)
+    income: int = Field(..., ge=0)
+    is_active: bool = Field(...)
 
     def get_state(self):
         return self.turn, self.money, self.income
@@ -43,17 +43,17 @@ class GameState:  # game_data
 
 class GameStateCreate(BaseModel):
 
-    username: str
-    turn: int
-    money: int
-    income: int
-    is_active: bool
+    username: str = Field(..., min_length=1)
+    turn: int = Field(..., gt=0)
+    money: int = Field(..., ge=0)
+    income: int = Field(..., ge=0)
+    is_active: bool = Field(...)
 
 
 class GameStateUpdate(BaseModel):
 
-    username: str | None = None
-    turn: int | None = None
-    money: int | None = None
-    income: int | None = None
-    is_active: bool | None = None
+    username: str | None = Field(default=None, min_length=1)
+    turn: int | None = Field(default=None, gt=0)
+    money: int | None = Field(default=None, ge=0)
+    income: int | None = Field(default=None, ge=0)
+    is_active: bool | None = Field(default=None)
