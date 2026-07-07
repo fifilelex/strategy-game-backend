@@ -1,5 +1,6 @@
 from app.domain.exceptions import (
     DatabaseError,
+    FieldIsEmpty,
     UserDoesExist,
     UserDoesNotExist,
 )
@@ -18,7 +19,8 @@ def create_gamestate(game: GameStateCreate):
     if game.username and game.turn:
         if g_repo.search_gamestate_by_name(game.username, game.turn):
             raise UserDoesExist
-
+    else:
+        raise FieldIsEmpty
     new_id = g_repo.create_gamestate(
         username=game.username,
         turn=game.turn,

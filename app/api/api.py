@@ -123,6 +123,10 @@ def read_gamestate(uid: int):
 def create_gamestate(game: GameStateCreate):
     try:
         new_id = g_service.create_gamestate(game)
+    except FieldIsEmpty:
+        raise HTTPException(
+            status_code=400, detail={"error": "Field is empty"}
+        )
     except UserDoesExist:
         raise HTTPException(
             status_code=404, detail={"error": "User already exists"}
