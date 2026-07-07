@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from pydantic import BaseModel, Field
 
 
@@ -28,8 +26,7 @@ class IncomeSourceUpdate(BaseModel, extra="forbid"):
     description: str | None = Field(default=None, min_length=1)
 
 
-@dataclass
-class GameState:  # game_data
+class GameState(BaseModel):
     uid: int = Field(..., ge=0)
     username: str = Field(..., min_length=1)
     turn: int = Field(..., gt=0)

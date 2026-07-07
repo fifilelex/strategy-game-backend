@@ -27,7 +27,9 @@ from app.services import purchase_service as p_service
 app = FastAPI()
 
 db.init_db()
-game = GameState(0, "filip", 0, 999, 1000, True)
+game = GameState(
+    uid=0, username="filip", turn=0, money=999, income=1000, is_active=True
+)
 
 
 @app.post("/api/item/")
