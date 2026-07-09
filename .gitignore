@@ -19,3 +19,7 @@ save_structure.py
 .pre-commit-config.yaml
 pyproject.toml
 
+
+# MD files
+plans.md
+repository_dump.md
