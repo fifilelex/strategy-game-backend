@@ -1,3 +1,5 @@
+from psycopg2.errors import NotNullViolation
+
 from app.domain.exceptions import (
     DatabaseError,
     FieldIsEmpty,
@@ -21,13 +23,17 @@ def create_gamestate(game: GameStateCreate):
             raise UserDoesExist
     else:
         raise FieldIsEmpty
-    new_id = g_repo.create_gamestate(
-        username=game.username,
-        turn=game.turn,
-        money=game.money,
-        income=game.income,
-        is_active=game.is_active,
-    )
+    try:
+        new_id = g_repo.create_gamestate(
+            username=game.username,
+            turn=game.turn,
+            money=game.money,
+            income=game.income,
+            is_active=game.is_active,
+        )
+    except NotNullViolation:
+        raise DatabaseError
+
     if new_id is None:
         raise DatabaseError
     return new_id
