@@ -28,7 +28,7 @@ app = FastAPI()
 
 db.init_db()
 game = GameState(
-    uid=0, username="filip", turn=0, money=999, income=1000, is_active=True
+    uid=0, username="filip", turn=1, money=999, income=1000, is_active=True
 )
 
 
