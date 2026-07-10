@@ -45,7 +45,7 @@ def update_gamestate(uid: int, game: GameStateUpdate):
     if not gamestate:
         raise UserDoesNotExist
 
-    data = game.model_dump(exclude_unset=True)
+    data = game.model_dump(exclude_unset=True, exclude_none=True)
 
     if g_repo.update_gamestate(uid, data) is None:
         raise DatabaseError

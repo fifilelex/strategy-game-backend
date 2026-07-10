@@ -1,42 +1,44 @@
 from dotenv import load_dotenv
 
-from app.persistence.init_db import get_connection
+from app.domain.exceptions import DatabaseError, FieldIsInvalid
+from app.persistence.init_db import engine, text
 
 # Load environment variables from .env file
 load_dotenv()
+
+ALLOWED_FIELDS = {"username", "turn", "money", "income", "is_active"}
 
 
 def read_gamestate(uid: int):
 
     # establish connection with db
     try:
-        with get_connection() as conn:
+        with engine.connect() as conn:
             print("Connection established")
-            # create cursor
-            with conn.cursor() as cur:
-                cur.execute(
-                    (
-                        """
+
+            result = conn.execute(
+                text(
+                    """
                 SELECT * FROM gamestate
-                WHERE uid = %s;
+                WHERE uid = :uid;
                 """
-                    ),
-                    [uid],
-                )
-                # fetch single gamestate
-                row = cur.fetchone()
+                ),
+                {"uid": uid},
+            )
+
+            for row in result:
 
                 if row is None:
                     return None
 
-                return {
-                    "uid": row[0],
-                    "username": row[1],
-                    "turn": row[2],
-                    "money": row[3],
-                    "income": row[4],
-                    "is_active": row[5],
-                }
+            return {
+                "uid": row[0],
+                "username": row[1],
+                "turn": row[2],
+                "money": row[3],
+                "income": row[4],
+                "is_active": row[5],
+            }
     except Exception as e:
         print("Connection failed")
         print(e)
@@ -47,32 +49,31 @@ def search_gamestate_by_name(name: str, turn: int):
 
     # establish connection with db
     try:
-        with get_connection() as conn:
+        with engine.connect() as conn:
             print("Connection established")
 
-            # create cursor
-            with conn.cursor() as cur:
-                # get gamestate with matching username
-                cur.execute(
+            result = conn.execute(
+                text(
                     """
                     SELECT * FROM gamestate
-                    WHERE username = %s AND turn = %s;
-                    """,
-                    [name, turn],
-                )
-                row = cur.fetchone()
+                    WHERE username = :username AND turn = :turn;
+                    """
+                ),
+                {"username": name, "turn": turn},
+            )
+            for row in result:
 
                 if row is None:
                     return None
-                # present gamestate as a dictionary
-                return {
-                    "uid": row[0],
-                    "username": row[1],
-                    "turn": row[2],
-                    "money": row[3],
-                    "income": row[4],
-                    "is_active": row[5],
-                }
+            # present gamestate as a dictionary
+            return {
+                "uid": row[0],
+                "username": row[1],
+                "turn": row[2],
+                "money": row[3],
+                "income": row[4],
+                "is_active": row[5],
+            }
     except Exception as e:
         print("Connection failed")
         print(e)
@@ -85,20 +86,29 @@ def create_gamestate(
 
     # establish connection with db
     try:
-        with get_connection() as conn:
+        with engine.begin() as conn:
             print("Connection established")
-            with conn.cursor() as cur:
-                cur.execute(
+
+            result = conn.execute(
+                text(
                     """
                 INSERT INTO gamestate(username, turn, money, income, is_active)
-                VALUES(%s, %s, %s, %s, %s)
+                VALUES(:username, :turn, :money, :income, :is_active)
                 RETURNING uid;
-                """,
-                    (username, turn, money, income, is_active),
-                )
-                uid = cur.fetchone()[0]  # type: ignore
-
-                return uid
+                """
+                ),
+                {
+                    "username": username,
+                    "turn": turn,
+                    "money": money,
+                    "income": income,
+                    "is_active": is_active,
+                },
+            )
+            row = result.fetchone()
+            if row is None:
+                raise DatabaseError
+            return row[0]
     except Exception as e:
         print("Connection failed")
         print(e)
@@ -109,41 +119,42 @@ def update_gamestate(uid: int, data: dict):
 
     # unpack dictionary data into two separate lists
     fields = []
-    values = []
+    params = {"uid": uid}
 
     for key, value in data.items():
-        fields.append(f"{key} = %s")
-        values.append(value)
-    sql = "UPDATE gamestate SET " + ", ".join(fields) + " WHERE uid = %s;"
+        if key not in ALLOWED_FIELDS:
+            raise FieldIsInvalid
+        fields.append(f"{key} = :{key}")
+        params[key] = value
+    query = text(
+        f"""UPDATE gamestate
+                SET {", ".join(fields)}
+                WHERE uid = :uid"""
+    )
 
-    values.append(uid)
     # establish connection with db
     try:
-        with get_connection() as conn:
+        with engine.begin() as conn:
             print("Connection established")
-            # create cursor
-            with conn.cursor() as cur:
-                cur.execute(sql, values)
-                rows_affected = cur.rowcount
-                return rows_affected
 
+            result = conn.execute(query, params)
+            return result.rowcount
     except Exception as e:
         print("Connection failed")
         print(e)
-        return None
+    return None
 
 
 def delete_gamestate(uid: int):
 
     # establish connection with db
     try:
-        with get_connection() as conn:
+        with engine.begin() as conn:
             print("Connection established")
-            # create cursor
-            with conn.cursor() as cur:
-                cur.execute(("DELETE FROM gamestate WHERE uid = %s;"), [uid])
-                rows_affected = cur.rowcount
-                return rows_affected
+            result = conn.execute(
+                text("DELETE FROM gamestate WHERE uid = :uid;"), {"uid": uid}
+            )
+            return result.rowcount
     except Exception as e:
         print("Connection failed")
         print(e)

@@ -20,6 +20,7 @@ def create_item(item: IncomeSourceCreate):
     if i_repo.search_item_by_name(item.name):
         raise ItemDoesExist
     # creates item in DB
+
     new_id = i_repo.create_item(
         name=item.name,
         income=item.income,

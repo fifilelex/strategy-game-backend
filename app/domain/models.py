@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class IncomeSource(BaseModel, extra="forbid"):
+class IncomeSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     id_gamestate: int = Field(..., ge=0)
     id: int = Field(..., ge=0)
     name: str = Field(..., min_length=1)
@@ -10,21 +11,24 @@ class IncomeSource(BaseModel, extra="forbid"):
     description: str = Field(default="", min_length=0)
 
 
-class IncomeSourceCreate(BaseModel, extra="forbid"):
+class IncomeSourceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1)
     income: int = Field(..., gt=0)
     cost: int = Field(..., gt=0)
     description: str = ""
 
 
-class IncomeSourceUpdate(BaseModel, extra="forbid"):
+class IncomeSourceUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1)
     income: int | None = Field(default=None, gt=0)
     cost: int | None = Field(default=None, gt=0)
     description: str | None = Field(default=None, min_length=1)
 
 
-class GameState(BaseModel, extra="forbid"):
+class GameState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     uid: int = Field(..., ge=0)
     username: str = Field(..., min_length=1)
     turn: int = Field(..., gt=0)
@@ -36,7 +40,8 @@ class GameState(BaseModel, extra="forbid"):
         return self.turn, self.money, self.income
 
 
-class GameStateCreate(BaseModel, extra="forbid"):
+class GameStateCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     username: str = Field(..., min_length=1)
     turn: int = Field(..., gt=0)
     money: int = Field(..., ge=0)
@@ -44,7 +49,8 @@ class GameStateCreate(BaseModel, extra="forbid"):
     is_active: bool = Field(...)
 
 
-class GameStateUpdate(BaseModel, extra="forbid"):
+class GameStateUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     username: str | None = Field(default=None, min_length=1)
     turn: int | None = Field(default=None, gt=0)
     money: int | None = Field(default=None, ge=0)

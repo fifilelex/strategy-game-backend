@@ -32,3 +32,7 @@ class DatabaseError(Exception):
 
 class FieldIsEmpty(Exception):
     pass
+
+
+class FieldIsInvalid(Exception):
+    pass

@@ -26,7 +26,7 @@ from app.services import purchase_service as p_service
 
 app = FastAPI()
 
-db.init_db()
+db.init_db(db.engine)
 game = GameState(
     uid=0, username="filip", turn=1, money=999, income=1000, is_active=True
 )

@@ -1,27 +1,24 @@
 import os
 
-import psycopg2
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 # Load environment variables from .env file
 load_dotenv()
+url = os.getenv("DATABASE_URL")
+assert url is not None
+engine = create_engine(url)
 
 
-def get_connection():
-    conn_string = os.getenv("DATABASE_URL")
-    conn = psycopg2.connect(conn_string)
-    return conn
-
-
-def init_db():
+def init_db(engine):
 
     try:
-        with get_connection() as conn:
+        with engine.begin() as conn:
             print("Connection established")
 
-            cur = conn.cursor()
-            cur.execute(
-                """
+            conn.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS gamestate(
                 uid SERIAL PRIMARY KEY,
                 username VARCHAR(128) NOT NULL,
@@ -33,10 +30,12 @@ def init_db():
                 
 
             """
+                )
             )
 
-            cur.execute(
-                """
+            conn.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS items(
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(128) NOT NULL,
@@ -45,16 +44,19 @@ def init_db():
                 description VARCHAR(1024) NOT NULL DEFAULT('')
                 );
             """
+                )
             )
 
-            cur.execute(
-                """
+            conn.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS ownership(
                 user_id INT REFERENCES gamestate(uid),
                 item_id INT REFERENCES items(id),
                 PRIMARY KEY(user_id, item_id)
                 );
             """
+                )
             )
 
     except Exception as e:
