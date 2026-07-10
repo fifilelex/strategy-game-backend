@@ -1,11 +1,8 @@
 import pytest
-from fastapi.testclient import TestClient
 
 import app.persistence.game_repository as g_repo
-from app.api.api import app
 from app.domain.exceptions import UserDoesNotExist
 from app.domain.models import GameStateUpdate
-from app.persistence.init_db import get_connection
 from app.services.gamestate_service import (
     delete_gamestate,
     read_gamestate,
@@ -14,23 +11,6 @@ from app.services.gamestate_service import (
 
 # pyright: reportCallIssue=false
 # pyright: reportArgumentType=false
-
-
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def reset_db():
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("DELETE FROM ownership;")
-    cur.execute("DELETE FROM items;")
-    cur.execute("DELETE FROM gamestate;")
-
-    conn.commit()
-    conn.close()
 
 
 @pytest.fixture
