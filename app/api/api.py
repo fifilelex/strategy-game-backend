@@ -43,9 +43,7 @@ def create_item(item: IncomeSourceCreate):
             detail={"error": "Item with such name already exists"},
         )
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
     return {"id": new_id}
 
@@ -62,9 +60,7 @@ def read_item(id: int):
     try:
         item = i_service.read_item(id)
     except ItemDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Item not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
     return item
 
 
@@ -74,17 +70,11 @@ def update_item(id: int, item: IncomeSourceUpdate):
         i_service.update_item(id, item)
 
     except ItemDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Item not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
     except FieldIsEmpty:
-        raise HTTPException(
-            status_code=400, detail={"error": "No fields to update"}
-        )
+        raise HTTPException(status_code=400, detail={"error": "No fields to update"})
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
     except ItemDoesExist:
         raise HTTPException(
             status_code=409,
@@ -99,13 +89,9 @@ def delete_item(id: int):
     try:
         i_service.delete_item(id)
     except ItemDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Item not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
     return {"status": "deleted"}
 
@@ -115,9 +101,7 @@ def read_gamestate(uid: int):
     try:
         gamestate = g_service.read_gamestate(uid)
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
     return gamestate
 
 
@@ -126,17 +110,11 @@ def create_gamestate(game: GameStateCreate):
     try:
         new_id = g_service.create_gamestate(game)
     except FieldIsEmpty:
-        raise HTTPException(
-            status_code=400, detail={"error": "Field is empty"}
-        )
+        raise HTTPException(status_code=400, detail={"error": "Field is empty"})
     except UserDoesExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "User already exists"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "User already exists"})
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
     return {"id": new_id}
 
 
@@ -147,14 +125,10 @@ def update_gamestate(uid: int, game: GameStateUpdate):
 
     # if gamestate not found in DB
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
     # if DB update fails - raise HTTP 500
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
     return {"status": "ok"}
 
@@ -164,13 +138,9 @@ def delete_gamestate(uid):
     try:
         g_service.delete_gamestate(uid)
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
     return {"status": "deleted"}
 
 
@@ -180,9 +150,7 @@ def read_ownerships(uid: int):
         ownerships = p_service.check_ownerships(uid)
 
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
 
     return ownerships
 
@@ -193,14 +161,10 @@ def read_ownership(uid: int, id: int):
         ownership = p_service.check_ownership(uid, id)
 
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
 
     except ItemNotOwned:
-        raise HTTPException(
-            status_code=404, detail={"error": "Item not owned"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Item not owned"})
 
     return ownership
 
@@ -211,25 +175,17 @@ def create_ownership(uid: int, id: int):
         p_service.buy_item(uid, id)
 
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
     except ItemDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Item not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
     except ItemAlreadyBought:
-        raise HTTPException(
-            status_code=409, detail={"error": "Item already bought"}
-        )
+        raise HTTPException(status_code=409, detail={"error": "Item already bought"})
     except NotEnoughMoney:
         raise HTTPException(
             status_code=409, detail={"error": "User has not enough money"}
         )
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
     return {"status": "ok"}
 
@@ -239,15 +195,9 @@ def delete_ownership(uid: int, id: int):
     try:
         p_service.delete_ownership(uid, id)
     except UserDoesNotExist:
-        raise HTTPException(
-            status_code=404, detail={"error": "Gamestate not found"}
-        )
+        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
     except ItemNotOwned:
-        raise HTTPException(
-            status_code=404, detail={"error:": "No such ownership"}
-        )
+        raise HTTPException(status_code=404, detail={"error:": "No such ownership"})
     except DatabaseError:
-        raise HTTPException(
-            status_code=500, detail={"error": "Database error"}
-        )
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
     return {"status": "ok"}

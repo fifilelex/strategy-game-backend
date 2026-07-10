@@ -9,9 +9,7 @@ from app.domain.models import (
 
 
 def test_IncomeSource_success():
-    item = IncomeSource(
-        id_gamestate=1, id=4, name="Factory", income=400, cost=40
-    )
+    item = IncomeSource(id_gamestate=1, id=4, name="Factory", income=400, cost=40)
     assert item.id_gamestate == 1
     assert item.id == 4
     assert item.name == "Factory"
