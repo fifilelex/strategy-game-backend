@@ -23,3 +23,4 @@ pyproject.toml
 # MD files
 plans.md
 repository_dump.md
+plans/
