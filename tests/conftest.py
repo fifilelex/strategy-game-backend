@@ -4,7 +4,7 @@ import pytest
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
-from app.persistence.init_db import init_db
+from app.persistence.tables import metadata
 
 load_dotenv()
 url = os.getenv("DATABASE_URL")
@@ -14,7 +14,7 @@ test_engine = create_engine(url)
 
 @pytest.fixture(autouse=True)
 def reset_db():
-    init_db(test_engine)
+    metadata.create_all(test_engine, checkfirst=True)
     with test_engine.begin() as conn:
 
         conn.execute(text("DELETE FROM ownership"))

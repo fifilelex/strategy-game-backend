@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
+from sqlalchemy import and_, delete, insert, select, update
 
 from app.domain.exceptions import FieldIsInvalid
-from app.persistence.init_db import engine, text
+from app.persistence.tables import engine, items, ownership
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,19 +16,9 @@ def create_item(name: str, income: int, cost: int, description: str):
         with engine.begin() as conn:
             print("Connection established")
             result = conn.execute(
-                text(
-                    """
-                            INSERT INTO items(name, income, cost, description)
-                            VALUES(:name, :income, :cost, :description)
-                            RETURNING id;       
-                            """
-                ),
-                {
-                    "name": name,
-                    "income": income,
-                    "cost": cost,
-                    "description": description,
-                },
+                insert(items)
+                .values(name=name, income=income, cost=cost, description=description)
+                .returning(items.c.id)
             )
 
             row = result.fetchone()
@@ -48,13 +39,7 @@ def read_items():
             print("Connection established")
 
             # select all rows from items table
-            result = conn.execute(
-                text(
-                    """
-                            SELECT * FROM items;
-                            """
-                )
-            )
+            result = conn.execute(select(items))
             rows = result.fetchall()
 
             # present every item as a dictionary
@@ -82,15 +67,8 @@ def read_item(id: int):
             print("Connection established")
 
             # get item with matching id
-            result = conn.execute(
-                text(
-                    """
-                            SELECT * FROM items
-                            WHERE id =:id;
-                            """
-                ),
-                {"id": id},
-            )
+            result = conn.execute(select(items).where(items.c.id == id))
+
             row = result.fetchone()
 
             if row is None:  # item not found -> return None
@@ -118,15 +96,7 @@ def search_item_by_name(name: str):
             print("Connection established")
 
             # get item with matching name
-            result = conn.execute(
-                text(
-                    """
-                            SELECT * FROM items
-                            WHERE name = :name;
-                            """
-                ),
-                {"name": name},
-            )
+            result = conn.execute(select(items).where(items.c.name == name))
 
         row = result.fetchone()
 
@@ -148,23 +118,15 @@ def search_item_by_name(name: str):
 
 def update_item(id: int, data: dict):
 
-    # unpack dictionary data into two separate lists
-    fields = []
-    params = {"id": id}
-
-    for key, value in data.items():
+    for key in data.keys():
         if key not in ALLOWED_KEY:
             raise FieldIsInvalid
-        fields.append(f"{key} = :{key}")
-        params[key] = value
-
-    query = text(f"UPDATE items SET {','.join(fields)} WHERE id = :id")
 
     # establish connection with db
     try:
         with engine.begin() as conn:
             print("Connection established")
-            result = conn.execute(query, params)
+            result = conn.execute(update(items).values(data).where(items.c.id == id))
             return result.rowcount
 
     except Exception as e:
@@ -179,15 +141,8 @@ def delete_item(id: int):
     try:
         with engine.begin() as conn:
             print("Connection established")
-            result = conn.execute(
-                text(
-                    """
-                    DELETE FROM items
-                    WHERE id = :id;
-                    """
-                ),
-                {"id": id},
-            )
+            result = conn.execute(delete(items).where(items.c.id == id))
+
             return result.rowcount
 
     except Exception as e:
@@ -201,15 +156,7 @@ def read_ownerships(uid: int):
     try:
         with engine.connect() as conn:
             print("Connection established")
-            result = conn.execute(
-                text(
-                    """
-                        SELECT * FROM ownership
-                        WHERE user_id = :uid;
-                        """
-                ),
-                {"uid": uid},
-            )
+            result = conn.execute(select(ownership).where(ownership.c.user_id == uid))
 
             rows = result.fetchall()
             return [{"uid": row[0], "id": row[1]} for row in rows]
@@ -224,13 +171,9 @@ def read_ownership(uid: int, id: int):
         with engine.connect() as conn:
             print("Connection established")
             result = conn.execute(
-                text(
-                    """
-                        SELECT * FROM ownership
-                        WHERE user_id = :uid AND item_id = :id;
-                        """
-                ),
-                {"uid": uid, "id": id},
+                select(ownership).where(
+                    and_(ownership.c.user_id == uid, ownership.c.item_id == id)
+                )
             )
 
             row = result.fetchone()
@@ -252,15 +195,11 @@ def create_ownership(uid: int, id: int):
         with engine.begin() as conn:
             print("Connection established")
             result = conn.execute(
-                text(
-                    """
-                        INSERT INTO ownership(user_id, item_id)
-                        VALUES(:uid, :id)
-                        RETURNING user_id, item_id
-                        """
-                ),
-                {"uid": uid, "id": id},
+                insert(ownership)
+                .values(user_id=uid, item_id=id)
+                .returning(ownership.c.user_id, ownership.c.item_id)
             )
+
             row = result.fetchone()
         return {"uid": row[0], "id": row[1]} if row else None
 
@@ -277,14 +216,11 @@ def delete_ownership(uid: int, id: int):
         with engine.begin() as conn:
             print("Connection established")
             result = conn.execute(
-                text(
-                    """
-                        DELETE FROM ownership
-                        WHERE user_id = :uid AND item_id = :id
-                        """
-                ),
-                {"uid": uid, "id": id},
+                delete(ownership).where(
+                    and_(ownership.c.user_id == uid, ownership.c.item_id == id)
+                )
             )
+
             rows_affected = result.rowcount
             return rows_affected
     except Exception as e:

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from app.domain.exceptions import (
     DatabaseError,
@@ -12,27 +12,20 @@ from app.domain.exceptions import (
     UserDoesNotExist,
 )
 from app.domain.models import (
-    GameState,
     GameStateCreate,
     GameStateUpdate,
     IncomeSourceCreate,
     IncomeSourceUpdate,
 )
-from app.persistence import init_db as db
 from app.persistence import item_repository as i_repo
 from app.services import gamestate_service as g_service
 from app.services import item_service as i_service
 from app.services import purchase_service as p_service
 
-app = FastAPI()
-
-db.init_db(db.engine)
-game = GameState(
-    uid=0, username="filip", turn=1, money=999, income=1000, is_active=True
-)
+router = APIRouter()
 
 
-@app.post("/api/item/")
+@router.post("/api/item/")
 def create_item(item: IncomeSourceCreate):
 
     try:
@@ -48,14 +41,14 @@ def create_item(item: IncomeSourceCreate):
     return {"id": new_id}
 
 
-@app.get("/api/items")
+@router.get("/api/items")
 def read_items():
     rows = i_repo.read_items()
 
     return rows
 
 
-@app.get("/api/item/{id:int}")
+@router.get("/api/item/{id:int}")
 def read_item(id: int):
     try:
         item = i_service.read_item(id)
@@ -64,7 +57,7 @@ def read_item(id: int):
     return item
 
 
-@app.patch("/api/item/{id:int}")
+@router.patch("/api/item/{id:int}")
 def update_item(id: int, item: IncomeSourceUpdate):
     try:
         i_service.update_item(id, item)
@@ -84,7 +77,7 @@ def update_item(id: int, item: IncomeSourceUpdate):
     return {"status": "ok"}
 
 
-@app.delete("/api/item/{id:int}")
+@router.delete("/api/item/{id:int}")
 def delete_item(id: int):
     try:
         i_service.delete_item(id)
@@ -96,7 +89,7 @@ def delete_item(id: int):
     return {"status": "deleted"}
 
 
-@app.get("/api/user/{uid:int}")
+@router.get("/api/user/{uid:int}")
 def read_gamestate(uid: int):
     try:
         gamestate = g_service.read_gamestate(uid)
@@ -105,7 +98,7 @@ def read_gamestate(uid: int):
     return gamestate
 
 
-@app.post("/api/user/")
+@router.post("/api/user/")
 def create_gamestate(game: GameStateCreate):
     try:
         new_id = g_service.create_gamestate(game)
@@ -118,7 +111,7 @@ def create_gamestate(game: GameStateCreate):
     return {"id": new_id}
 
 
-@app.patch("/api/user/")
+@router.patch("/api/user/")
 def update_gamestate(uid: int, game: GameStateUpdate):
     try:
         g_service.update_gamestate(uid, game)
@@ -133,7 +126,7 @@ def update_gamestate(uid: int, game: GameStateUpdate):
     return {"status": "ok"}
 
 
-@app.delete("/api/user/")
+@router.delete("/api/user/")
 def delete_gamestate(uid):
     try:
         g_service.delete_gamestate(uid)
@@ -144,7 +137,7 @@ def delete_gamestate(uid):
     return {"status": "deleted"}
 
 
-@app.get("/api/user/ownerships/{uid:int}")
+@router.get("/api/user/ownerships/{uid:int}")
 def read_ownerships(uid: int):
     try:
         ownerships = p_service.check_ownerships(uid)
@@ -155,7 +148,7 @@ def read_ownerships(uid: int):
     return ownerships
 
 
-@app.get("/api/user/ownership")
+@router.get("/api/user/ownership")
 def read_ownership(uid: int, id: int):
     try:
         ownership = p_service.check_ownership(uid, id)
@@ -169,7 +162,7 @@ def read_ownership(uid: int, id: int):
     return ownership
 
 
-@app.post("/api/user/ownership")
+@router.post("/api/user/ownership")
 def create_ownership(uid: int, id: int):
     try:
         p_service.buy_item(uid, id)
@@ -190,7 +183,7 @@ def create_ownership(uid: int, id: int):
     return {"status": "ok"}
 
 
-@app.delete("/api/user/ownership")
+@router.delete("/api/user/ownership")
 def delete_ownership(uid: int, id: int):
     try:
         p_service.delete_ownership(uid, id)

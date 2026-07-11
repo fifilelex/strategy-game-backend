@@ -1,7 +1,9 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
+
+from app.persistence.tables import metadata
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,6 +12,8 @@ assert url is not None
 engine = create_engine(url)
 
 
+metadata.create_all(engine)
+'''
 def init_db(engine):
 
     try:
@@ -62,3 +66,4 @@ def init_db(engine):
     except Exception as e:
         print("Connection failed")
         print(e)
+'''

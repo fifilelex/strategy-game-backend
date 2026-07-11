@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
+from sqlalchemy import and_, delete, insert, select, update
 
 from app.domain.exceptions import DatabaseError, FieldIsInvalid
-from app.persistence.init_db import engine, text
+from app.persistence.tables import engine, gamestate
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,16 +16,7 @@ def read_gamestate(uid: int):
     try:
         with engine.connect() as conn:
             print("Connection established")
-
-            result = conn.execute(
-                text(
-                    """
-                SELECT * FROM gamestate
-                WHERE uid = :uid;
-                """
-                ),
-                {"uid": uid},
-            )
+            result = conn.execute(select(gamestate).where(gamestate.c.uid == uid))
 
             for row in result:
 
@@ -51,16 +43,12 @@ def search_gamestate_by_name(name: str, turn: int):
     try:
         with engine.connect() as conn:
             print("Connection established")
-
             result = conn.execute(
-                text(
-                    """
-                    SELECT * FROM gamestate
-                    WHERE username = :username AND turn = :turn;
-                    """
-                ),
-                {"username": name, "turn": turn},
+                select(gamestate).where(
+                    and_(gamestate.c.name == name, gamestate.c.turn == turn)
+                )
             )
+
             for row in result:
 
                 if row is None:
@@ -88,23 +76,18 @@ def create_gamestate(
     try:
         with engine.begin() as conn:
             print("Connection established")
-
             result = conn.execute(
-                text(
-                    """
-                INSERT INTO gamestate(username, turn, money, income, is_active)
-                VALUES(:username, :turn, :money, :income, :is_active)
-                RETURNING uid;
-                """
-                ),
-                {
-                    "username": username,
-                    "turn": turn,
-                    "money": money,
-                    "income": income,
-                    "is_active": is_active,
-                },
+                insert(gamestate)
+                .values(
+                    username=username,
+                    turn=turn,
+                    money=money,
+                    income=income,
+                    is_active=is_active,
+                )
+                .returning(gamestate.c.uid)
             )
+
             row = result.fetchone()
             if row is None:
                 raise DatabaseError
@@ -117,27 +100,18 @@ def create_gamestate(
 
 def update_gamestate(uid: int, data: dict):
 
-    # unpack dictionary data into two separate lists
-    fields = []
-    params = {"uid": uid}
-
-    for key, value in data.items():
+    for key in data.keys():
         if key not in ALLOWED_FIELDS:
             raise FieldIsInvalid
-        fields.append(f"{key} = :{key}")
-        params[key] = value
-    query = text(
-        f"""UPDATE gamestate
-                SET {", ".join(fields)}
-                WHERE uid = :uid"""
-    )
 
     # establish connection with db
     try:
         with engine.begin() as conn:
             print("Connection established")
 
-            result = conn.execute(query, params)
+            result = conn.execute(
+                update(gamestate).where(gamestate.c.uid == uid).values(data)
+            )
             return result.rowcount
     except Exception as e:
         print("Connection failed")
@@ -151,9 +125,8 @@ def delete_gamestate(uid: int):
     try:
         with engine.begin() as conn:
             print("Connection established")
-            result = conn.execute(
-                text("DELETE FROM gamestate WHERE uid = :uid;"), {"uid": uid}
-            )
+            result = conn.execute(delete(gamestate).where(gamestate.c.uid == uid))
+
             return result.rowcount
     except Exception as e:
         print("Connection failed")
