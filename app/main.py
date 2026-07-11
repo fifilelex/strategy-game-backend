@@ -9,3 +9,6 @@ app.include_router(router)
 
 def initialize():
     metadata.create_all(engine, checkfirst=True)
+
+
+initialize()

@@ -45,7 +45,7 @@ def search_gamestate_by_name(name: str, turn: int):
             print("Connection established")
             result = conn.execute(
                 select(gamestate).where(
-                    and_(gamestate.c.name == name, gamestate.c.turn == turn)
+                    and_(gamestate.c.username == name, gamestate.c.turn == turn)
                 )
             )
 
