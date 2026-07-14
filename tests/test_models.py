@@ -8,16 +8,16 @@ from app.domain.models import (
 )
 
 
-def test_IncomeSource_success():
-    item = IncomeSource(id_gamestate=1, id=4, name="Factory", income=400, cost=40)
+def test_income_source_success():
+    item = IncomeSource(id_gamestate=1, item_id=4, name="Factory", income=400, cost=40)
     assert item.id_gamestate == 1
-    assert item.id == 4
+    assert item.item_id == 4
     assert item.name == "Factory"
     assert item.income == 400
     assert item.cost == 40
 
 
-def test_IncomeSourceCreate_success():
+def test_incomesourcecreate_success():
     item = IncomeSourceCreate(name="maciek", income=10, cost=100)
     assert item.name == "maciek"
     assert item.income == 10
@@ -25,7 +25,7 @@ def test_IncomeSourceCreate_success():
     assert item.description == ""
 
 
-def test_IncomeSourceUpdate_partial_update():
+def test_incomesourceupdate_partial_update():
     item = IncomeSourceUpdate(name="Krzysiu", cost=40)
     assert item.name == "Krzysiu"
     assert item.income is None
@@ -33,16 +33,16 @@ def test_IncomeSourceUpdate_partial_update():
     assert item.description is None
 
 
-def test_GameStateSucces():
+def test_gamestatesucces():
     game = GameState(
-        uid=4,
+        user_id=4,
         username="kayle",
         turn=40,
         money=7325,
         income=230,
         is_active=True,
     )
-    assert game.uid == 4
+    assert game.user_id == 4
     assert game.username == "kayle"
     assert game.turn == 40
     assert game.money == 7325
@@ -50,7 +50,7 @@ def test_GameStateSucces():
     assert game.is_active
 
 
-def test_GameStateCreate_success():
+def test_gamestatecreate_success():
     game = GameStateCreate(
         username="kayle",
         turn=40,
@@ -66,7 +66,7 @@ def test_GameStateCreate_success():
     assert game.is_active
 
 
-def test_GameStateUpdate_success():
+def test_gamestateupdate_success():
     game = GameStateUpdate(
         turn=40,
         money=7325,
