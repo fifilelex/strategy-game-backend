@@ -24,3 +24,9 @@ pyproject.toml
 plans.md
 repository_dump.md
 plans/
+
+# VSC files
+.vscode/
+
+# coverage
+.coverage/
