@@ -1,7 +1,10 @@
+from typing import Any
+
 from dotenv import load_dotenv
 from sqlalchemy import and_, delete, insert, select, update
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
-from app.domain.exceptions import DatabaseError, FieldIsInvalid
+from app.domain.exceptions import DatabaseError, FieldIsInvalidError
 from app.persistence.tables import engine, gamestate
 
 # Load environment variables from .env file
@@ -10,34 +13,32 @@ load_dotenv()
 ALLOWED_FIELDS = {"username", "turn", "money", "income", "is_active"}
 
 
-def read_gamestate(uid: int):
+def read_gamestate(user_id: int) -> dict[str, Any] | None:
 
     # establish connection with db
     try:
         with engine.connect() as conn:
             print("Connection established")
-            result = conn.execute(select(gamestate).where(gamestate.c.uid == uid))
-
-            for row in result:
-
-                if row is None:
-                    return None
+            result = conn.execute(
+                select(gamestate).where(gamestate.c.user_id == user_id)
+            )
+            row = result.fetchone()
+            if row is None:
+                return None
 
             return {
-                "uid": row[0],
+                "user_id": row[0],
                 "username": row[1],
                 "turn": row[2],
                 "money": row[3],
                 "income": row[4],
                 "is_active": row[5],
             }
-    except Exception as e:
-        print("Connection failed")
-        print(e)
-        return None
+    except (SQLAlchemyError, DBAPIError):
+        raise DatabaseError
 
 
-def search_gamestate_by_name(name: str, turn: int):
+def search_gamestate_by_name(name: str, turn: int) -> dict[str, Any] | None:
 
     # establish connection with db
     try:
@@ -49,28 +50,25 @@ def search_gamestate_by_name(name: str, turn: int):
                 )
             )
 
-            for row in result:
-
-                if row is None:
-                    return None
+            row = result.fetchone()
+            if row is None:
+                return None
             # present gamestate as a dictionary
             return {
-                "uid": row[0],
+                "user_id": row[0],
                 "username": row[1],
                 "turn": row[2],
                 "money": row[3],
                 "income": row[4],
                 "is_active": row[5],
             }
-    except Exception as e:
-        print("Connection failed")
-        print(e)
-        return None
+    except (SQLAlchemyError, DBAPIError):
+        raise DatabaseError
 
 
 def create_gamestate(
     username: str, turn: int, money: int, income: int, is_active: bool
-):
+) -> int | None:
 
     # establish connection with db
     try:
@@ -85,24 +83,22 @@ def create_gamestate(
                     income=income,
                     is_active=is_active,
                 )
-                .returning(gamestate.c.uid)
+                .returning(gamestate.c.user_id)
             )
 
             row = result.fetchone()
             if row is None:
-                raise DatabaseError
+                return None
             return row[0]
-    except Exception as e:
-        print("Connection failed")
-        print(e)
-        return None
+    except (SQLAlchemyError, DBAPIError):
+        raise DatabaseError
 
 
-def update_gamestate(uid: int, data: dict):
+def update_gamestate(user_id: int, data: dict) -> int | None:
 
-    for key in data.keys():
+    for key in data:
         if key not in ALLOWED_FIELDS:
-            raise FieldIsInvalid
+            raise FieldIsInvalidError
 
     # establish connection with db
     try:
@@ -110,25 +106,23 @@ def update_gamestate(uid: int, data: dict):
             print("Connection established")
 
             result = conn.execute(
-                update(gamestate).where(gamestate.c.uid == uid).values(data)
+                update(gamestate).where(gamestate.c.user_id == user_id).values(data)
             )
             return result.rowcount
-    except Exception as e:
-        print("Connection failed")
-        print(e)
-    return None
+    except (SQLAlchemyError, DBAPIError):
+        raise DatabaseError
 
 
-def delete_gamestate(uid: int):
+def delete_gamestate(user_id: int) -> int | None:
 
     # establish connection with db
     try:
         with engine.begin() as conn:
             print("Connection established")
-            result = conn.execute(delete(gamestate).where(gamestate.c.uid == uid))
+            result = conn.execute(
+                delete(gamestate).where(gamestate.c.user_id == user_id)
+            )
 
             return result.rowcount
-    except Exception as e:
-        print("Connection failed")
-        print(e)
-        return None
+    except (SQLAlchemyError, DBAPIError):
+        raise DatabaseError
