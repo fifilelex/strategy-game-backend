@@ -21,7 +21,7 @@ metadata = MetaData()
 gamestate = Table(
     "gamestate",
     metadata,
-    Column("uid", Integer, primary_key=True),
+    Column("user_id", Integer, primary_key=True),
     Column("username", String(128), nullable=False),
     Column("turn", Integer, nullable=False),
     Column("money", Integer, nullable=False),
@@ -32,7 +32,7 @@ gamestate = Table(
 items = Table(
     "items",
     metadata,
-    Column("id", Integer, primary_key=True),
+    Column("item_id", Integer, primary_key=True),
     Column("name", String(128), nullable=False),
     Column("income", Integer, nullable=False),
     Column("cost", Integer, nullable=False),
@@ -42,6 +42,6 @@ items = Table(
 ownership = Table(
     "ownership",
     metadata,
-    Column("user_id", Integer, ForeignKey("gamestate.uid"), primary_key=True),
-    Column("item_id", Integer, ForeignKey("items.id"), primary_key=True),
+    Column("user_id", Integer, ForeignKey("gamestate.user_id"), primary_key=True),
+    Column("item_id", Integer, ForeignKey("items.item_id"), primary_key=True),
 )
