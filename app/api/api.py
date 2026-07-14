@@ -1,23 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from app.domain.exceptions import (
-    DatabaseError,
-    FieldIsEmpty,
-    ItemAlreadyBought,
-    ItemDoesExist,
-    ItemDoesNotExist,
-    ItemNotOwned,
-    NotEnoughMoney,
-    UserDoesExist,
-    UserDoesNotExist,
-)
 from app.domain.models import (
+    GameState,
     GameStateCreate,
     GameStateUpdate,
     IncomeSourceCreate,
+    IncomeSourceRead,
     IncomeSourceUpdate,
+    Ownership,
 )
-from app.persistence import item_repository as i_repo
 from app.services import gamestate_service as g_service
 from app.services import item_service as i_service
 from app.services import purchase_service as p_service
@@ -26,171 +17,95 @@ router = APIRouter()
 
 
 @router.post("/api/item/")
-def create_item(item: IncomeSourceCreate):
+def create_item(item: IncomeSourceCreate) -> dict[str, int]:
 
-    try:
-        new_id = i_service.create_item(item)
-    except ItemDoesExist:
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "Item with such name already exists"},
-        )
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
+    new_id = i_service.create_item(item)
 
-    return {"id": new_id}
+    return {"Item_created": new_id}
 
 
 @router.get("/api/items")
-def read_items():
-    rows = i_repo.read_items()
+def read_items() -> list[IncomeSourceRead] | None:
+    rows = i_service.read_items()
 
     return rows
 
 
-@router.get("/api/item/{id:int}")
-def read_item(id: int):
-    try:
-        item = i_service.read_item(id)
-    except ItemDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Item not found"})
+@router.get("/api/item/{item_id:int}")
+def read_item(item_id: int) -> IncomeSourceRead:
+    item = i_service.read_item(item_id)
     return item
 
 
-@router.patch("/api/item/{id:int}")
-def update_item(id: int, item: IncomeSourceUpdate):
-    try:
-        i_service.update_item(id, item)
+@router.patch("/api/item/")
+def update_item(item_id: int, item: IncomeSourceUpdate) -> dict[str, int]:
+    updated_id = i_service.update_item(item_id, item)
 
-    except ItemDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Item not found"})
-    except FieldIsEmpty:
-        raise HTTPException(status_code=400, detail={"error": "No fields to update"})
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-    except ItemDoesExist:
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "Item with such name already exists"},
-        )
-
-    return {"status": "ok"}
+    return {"Item_updated": updated_id}
 
 
-@router.delete("/api/item/{id:int}")
-def delete_item(id: int):
-    try:
-        i_service.delete_item(id)
-    except ItemDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Item not found"})
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
+@router.delete("/api/item/")
+def delete_item(item_id: int) -> dict[str, int]:
+    deleted_id = i_service.delete_item(item_id)
 
-    return {"status": "deleted"}
+    return {"Item_deleted": deleted_id}
 
 
-@router.get("/api/user/{uid:int}")
-def read_gamestate(uid: int):
-    try:
-        gamestate = g_service.read_gamestate(uid)
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
+@router.get("/api/user/{user_id:int}")
+def read_gamestate(user_id: int) -> GameState:
+    gamestate = g_service.read_gamestate(user_id)
+
     return gamestate
 
 
 @router.post("/api/user/")
-def create_gamestate(game: GameStateCreate):
-    try:
-        new_id = g_service.create_gamestate(game)
-    except FieldIsEmpty:
-        raise HTTPException(status_code=400, detail={"error": "Field is empty"})
-    except UserDoesExist:
-        raise HTTPException(status_code=404, detail={"error": "User already exists"})
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-    return {"id": new_id}
+def create_gamestate(game: GameStateCreate) -> dict[str, int]:
+
+    new_id = g_service.create_gamestate(game)
+
+    return {"Gamestate_created": new_id}
 
 
 @router.patch("/api/user/")
-def update_gamestate(uid: int, game: GameStateUpdate):
-    try:
-        g_service.update_gamestate(uid, game)
+def update_gamestate(user_id: int, game: GameStateUpdate) -> dict[str, int]:
+    updated_id = g_service.update_gamestate(user_id, game)
 
-    # if gamestate not found in DB
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
-    # if DB update fails - raise HTTP 500
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-
-    return {"status": "ok"}
+    return {"Gamestate_updated": updated_id}
 
 
 @router.delete("/api/user/")
-def delete_gamestate(uid):
-    try:
-        g_service.delete_gamestate(uid)
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-    return {"status": "deleted"}
+def delete_gamestate(user_id: int) -> dict[str, int]:
+
+    deleted_id = g_service.delete_gamestate(user_id)
+
+    return {"Gamestate_deleted": deleted_id}
 
 
-@router.get("/api/user/ownerships/{uid:int}")
-def read_ownerships(uid: int):
-    try:
-        ownerships = p_service.check_ownerships(uid)
+@router.get("/api/user/ownerships/{user_id:int}")
+def read_ownerships(user_id: int) -> list[Ownership]:
 
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
+    ownerships = p_service.check_ownerships(user_id)
 
     return ownerships
 
 
 @router.get("/api/user/ownership")
-def read_ownership(uid: int, id: int):
-    try:
-        ownership = p_service.check_ownership(uid, id)
-
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
-
-    except ItemNotOwned:
-        raise HTTPException(status_code=404, detail={"error": "Item not owned"})
+def read_ownership(user_id: int, item_id: int) -> Ownership:
+    ownership = p_service.check_ownership(user_id, item_id)
 
     return ownership
 
 
 @router.post("/api/user/ownership")
-def create_ownership(uid: int, id: int):
-    try:
-        p_service.buy_item(uid, id)
+def create_ownership(ownership: Ownership) -> dict[str, str]:
+    p_service.buy_item(ownership.user_id, ownership.item_id)
 
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
-    except ItemDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Item not found"})
-    except ItemAlreadyBought:
-        raise HTTPException(status_code=409, detail={"error": "Item already bought"})
-    except NotEnoughMoney:
-        raise HTTPException(
-            status_code=409, detail={"error": "User has not enough money"}
-        )
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-
-    return {"status": "ok"}
+    return {"Ownership_created": "OK"}
 
 
 @router.delete("/api/user/ownership")
-def delete_ownership(uid: int, id: int):
-    try:
-        p_service.delete_ownership(uid, id)
-    except UserDoesNotExist:
-        raise HTTPException(status_code=404, detail={"error": "Gamestate not found"})
-    except ItemNotOwned:
-        raise HTTPException(status_code=404, detail={"error:": "No such ownership"})
-    except DatabaseError:
-        raise HTTPException(status_code=500, detail={"error": "Database error"})
-    return {"status": "ok"}
+def delete_ownership(ownership: Ownership) -> dict[str, str]:
+
+    p_service.delete_ownership(ownership.user_id, ownership.item_id)
+
+    return {"Ownership_deleted": "OK"}
