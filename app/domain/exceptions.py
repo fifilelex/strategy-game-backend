@@ -1,28 +1,28 @@
-class UserDoesNotExist(Exception):
+class UserDoesNotExistError(Exception):
     pass
 
 
-class UserDoesExist(Exception):
+class UserDoesExistError(Exception):
     pass
 
 
-class ItemDoesNotExist(Exception):
+class ItemDoesNotExistError(Exception):
     pass
 
 
-class ItemNotOwned(Exception):
+class ItemNotOwnedError(Exception):
     pass
 
 
-class ItemDoesExist(Exception):
+class ItemDoesExistError(Exception):
     pass
 
 
-class ItemAlreadyBought(Exception):
+class ItemAlreadyBoughtError(Exception):
     pass
 
 
-class NotEnoughMoney(Exception):
+class NotEnoughMoneyError(Exception):
     pass
 
 
@@ -30,9 +30,9 @@ class DatabaseError(Exception):
     pass
 
 
-class FieldIsEmpty(Exception):
+class FieldIsEmptyError(Exception):
     pass
 
 
-class FieldIsInvalid(Exception):
+class FieldIsInvalidError(Exception):
     pass
