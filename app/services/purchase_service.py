@@ -1,45 +1,45 @@
 from app.domain.exceptions import (
     DatabaseError,
-    ItemAlreadyBought,
-    ItemDoesNotExist,
-    ItemNotOwned,
-    NotEnoughMoney,
-    UserDoesNotExist,
+    ItemAlreadyBoughtError,
+    ItemDoesNotExistError,
+    ItemNotOwnedError,
+    NotEnoughMoneyError,
+    UserDoesNotExistError,
 )
-from app.domain.models import GameStateUpdate
+from app.domain.models import GameStateUpdate, Ownership
 from app.persistence import game_repository as g_repo
 from app.persistence import item_repository as i_repo
 
-# does user exist?
-# does item exist?
-# user does not have this item?
-# does user have enough money?
 
-
-def buy_item(uid: int, id: int):
+def buy_item(user_id: int, item_id: int) -> int:
     # load data
-    gamestate = g_repo.read_gamestate(uid)
-    item = i_repo.read_item(id)
-
+    try:
+        gamestate = g_repo.read_gamestate(user_id)
+    except DatabaseError:
+        raise DatabaseError
+    try:
+        item = i_repo.read_item(item_id)
+    except DatabaseError:
+        raise DatabaseError
     # does user exist?
     if not gamestate:
-        raise UserDoesNotExist
+        raise UserDoesNotExistError
 
     # does item exist?
     if not item:
-        raise ItemDoesNotExist
+        raise ItemDoesNotExistError
 
-    ownership = i_repo.read_ownership(uid, id)
+    ownership = i_repo.read_ownership(user_id, item_id)
     # user does not have this item?
     if ownership:
-        raise ItemAlreadyBought
+        raise ItemAlreadyBoughtError
 
     # does user have enough money?
     if item["cost"] > gamestate["money"]:
-        raise NotEnoughMoney
+        raise NotEnoughMoneyError
 
     # do DB update - if fails, raise DB error
-    if not i_repo.create_ownership(uid, id):
+    if not i_repo.create_ownership(user_id, item_id):
         raise DatabaseError
 
     # calculate new data
@@ -49,56 +49,66 @@ def buy_item(uid: int, id: int):
     game = GameStateUpdate(money=new_money, income=new_income)
     data = game.model_dump(exclude_unset=True)
 
-    if not g_repo.update_gamestate(uid, data):
+    rowcount = g_repo.update_gamestate(user_id, data)
+    if rowcount is None:
         raise DatabaseError
+    return rowcount
 
 
-def check_ownerships(uid: int):
+def check_ownerships(user_id: int) -> list[Ownership]:
     # does user exist
-    gamestate = g_repo.read_gamestate(uid)
+    gamestate = g_repo.read_gamestate(user_id)
 
     if not gamestate:
-        raise UserDoesNotExist
+        raise UserDoesNotExistError
 
-    return i_repo.read_ownerships(uid)
+    ownerships_repo = i_repo.read_ownerships(user_id)
+    if ownerships_repo is None:
+        return []
+    output = []
+    for ownership in ownerships_repo:
+        output.append(Ownership(**ownership))
+    return output
 
 
-def check_ownership(uid: int, id: int):
-    gamestate = g_repo.read_gamestate(uid)
+def check_ownership(user_id: int, item_id: int) -> Ownership:
+    gamestate = g_repo.read_gamestate(user_id)
 
     if not gamestate:
-        raise UserDoesNotExist
+        raise UserDoesNotExistError
 
-    ownership = i_repo.read_ownership(uid, id)
+    ownership = i_repo.read_ownership(user_id, item_id)
 
     if not ownership:
-        raise ItemNotOwned
+        raise ItemNotOwnedError
 
-    return ownership
+    return Ownership(**ownership)
 
 
-def delete_ownership(uid: int, id: int):
+def delete_ownership(user_id: int, item_id: int) -> int:
     # load data
-    gamestate = g_repo.read_gamestate(uid)
-    item = i_repo.read_item(id)
+    gamestate = g_repo.read_gamestate(user_id)
+    item = i_repo.read_item(item_id)
 
     if not gamestate:
-        raise UserDoesNotExist
+        raise UserDoesNotExistError
 
     if not item:
-        raise ItemDoesNotExist
+        raise ItemDoesNotExistError
 
-    ownership = check_ownership(uid, id)
+    ownership = check_ownership(user_id, item_id)
 
     if not ownership:
-        raise ItemNotOwned
+        raise ItemNotOwnedError
 
-    if not i_repo.delete_ownership(uid, id):
+    if not i_repo.delete_ownership(user_id, item_id):
         raise DatabaseError
 
     new_money = gamestate["money"] + int((item["cost"]) * 0.5)
     new_income = gamestate["income"] - item["income"]
     game = GameStateUpdate(money=new_money, income=new_income)
     data = game.model_dump(exclude_unset=True)
-    if not g_repo.update_gamestate(uid, data):
+    rowcount = g_repo.update_gamestate(user_id, data)
+    if rowcount is None:
         raise DatabaseError
+    return rowcount

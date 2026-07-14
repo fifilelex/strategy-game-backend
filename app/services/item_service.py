@@ -1,24 +1,35 @@
 from app.domain.exceptions import (
     DatabaseError,
-    FieldIsEmpty,
-    ItemDoesExist,
-    ItemDoesNotExist,
+    FieldIsEmptyError,
+    ItemDoesExistError,
+    ItemDoesNotExistError,
 )
-from app.domain.models import IncomeSourceCreate, IncomeSourceUpdate
+from app.domain.models import (
+    IncomeSourceCreate,
+    IncomeSourceRead,
+    IncomeSourceUpdate,
+)
 from app.persistence import item_repository as i_repo
 
 
-def read_item(id: int):
-    db_item = i_repo.read_item(id)
+def read_item(item_id: int) -> IncomeSourceRead:
+    db_item = i_repo.read_item(item_id)
     if not db_item:
-        raise ItemDoesNotExist
-    return db_item
+        raise ItemDoesNotExistError
+    return IncomeSourceRead(**db_item)
 
 
-def create_item(item: IncomeSourceCreate):
+def read_items() -> list[IncomeSourceRead] | None:
+    db_items = i_repo.read_items()
+    if db_items == []:
+        return []
+    return [IncomeSourceRead(**item) for item in db_items]
+
+
+def create_item(item: IncomeSourceCreate) -> int:
     # check if item already exists
     if i_repo.search_item_by_name(item.name):
-        raise ItemDoesExist
+        raise ItemDoesExistError
     # creates item in DB
 
     new_id = i_repo.create_item(
@@ -34,33 +45,37 @@ def create_item(item: IncomeSourceCreate):
     return new_id
 
 
-def update_item(id: int, item: IncomeSourceUpdate):
+def update_item(item_id: int, item: IncomeSourceUpdate) -> int:
     # load item from DB
-    db_item = i_repo.read_item(id)
+    db_item = i_repo.read_item(item_id)
 
     # unpack item as dictionary
     data = item.model_dump(exclude_unset=True)
 
     # if item does not exist
     if not db_item:
-        raise ItemDoesNotExist
+        raise ItemDoesNotExistError
     # check if item with such name already exists
-    if item.name:
-        if i_repo.search_item_by_name(item.name):
-            raise ItemDoesExist
+    if item.name and i_repo.search_item_by_name(item.name):
+        raise ItemDoesExistError
 
     if not data:
-        raise FieldIsEmpty
+        raise FieldIsEmptyError
 
-    if i_repo.update_item(id, data) is None:
+    rowcount = i_repo.update_item(item_id, data)
+
+    if rowcount is None:
         raise DatabaseError
+    return item_id
 
 
-def delete_item(id: int):
+def delete_item(item_id: int) -> int:
     # load item from DB
-    db_item = i_repo.read_item(id)
+    db_item = i_repo.read_item(item_id)
     # if item does not exist
     if not db_item:
-        raise ItemDoesNotExist
-    if i_repo.delete_item(id) is None:
+        raise ItemDoesNotExistError
+    rowcount = i_repo.delete_item(item_id)
+    if rowcount is None:
         raise DatabaseError
+    return item_id
