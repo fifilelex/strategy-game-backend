@@ -2,15 +2,12 @@ from fastapi import FastAPI
 
 from app.api.api import router
 from app.api.exception_handlers import create_handlers
-from app.persistence.tables import engine, metadata
+from app.persistence.init_db import initialize_db
+from app.persistence.tables import engine
 
 app = FastAPI()
 app.include_router(router)
 
 
-def initialize():
-    metadata.create_all(engine, checkfirst=True)
-
-
-initialize()
+initialize_db(engine)
 create_handlers(app)
