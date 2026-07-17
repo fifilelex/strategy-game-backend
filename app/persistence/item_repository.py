@@ -1,7 +1,7 @@
 from typing import Any
 
 from dotenv import load_dotenv
-from sqlalchemy import and_, delete, insert, select, update
+from sqlalchemy import Engine, and_, delete, insert, select, update
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from app.domain.exceptions import DatabaseError, FieldIsInvalidError
@@ -12,67 +12,99 @@ load_dotenv()
 ALLOWED_KEY = {"name", "cost", "income", "description"}
 
 
-def create_item(name: str, income: int, cost: int, description: str) -> int | None:
+class ItemRepository:
+    def __init__(self, engine: Engine):
+        self.engine = engine
 
-    # establish connection with db
-    try:
-        with engine.begin() as conn:
-            print("Connection established")
-            result = conn.execute(
-                insert(items)
-                .values(name=name, income=income, cost=cost, description=description)
-                .returning(items.c.item_id)
-            )
+    def create_item(
+        self, name: str, income: int, cost: int, description: str
+    ) -> int | None:
 
-            row = result.fetchone()
-            if row is None:
-                return None
-        return row.item_id
+        # establish connection with db
+        try:
+            with engine.begin() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    insert(items)
+                    .values(
+                        name=name, income=income, cost=cost, description=description
+                    )
+                    .returning(items.c.item_id)
+                )
 
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
+                row = result.fetchone()
+                if row is None:
+                    return None
+            return row.item_id
 
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
 
-def read_items() -> list[dict[str, Any]]:
+    def read_items(self) -> list[dict[str, Any]]:
 
-    # establish connection with db
-    try:
-        with engine.connect() as conn:
-            print("Connection established")
+        # establish connection with db
+        try:
+            with engine.connect() as conn:
+                print("Connection established")
 
-            # select all rows from items table
-            result = conn.execute(select(items))
-            rows = result.fetchall()
-            if rows is None:
-                return []
-            # present every item as a dictionary
-            return [
-                {
-                    "item_id": r[0],
-                    "name": r[1],
-                    "income": r[2],
-                    "cost": r[3],
-                    "description": r[4],
+                # select all rows from items table
+                result = conn.execute(select(items))
+                rows = result.fetchall()
+                if rows is None:
+                    return []
+                # present every item as a dictionary
+                return [
+                    {
+                        "item_id": r[0],
+                        "name": r[1],
+                        "income": r[2],
+                        "cost": r[3],
+                        "description": r[4],
+                    }
+                    for r in rows
+                ]
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
+
+    def read_item(self, item_id: int) -> dict[str, Any] | None:
+
+        # establish connection with db
+        try:
+            with engine.connect() as conn:
+                print("Connection established")
+
+                # get item with matching item_id
+                result = conn.execute(select(items).where(items.c.item_id == item_id))
+
+                row = result.fetchone()
+
+                if row is None:  # item not found -> return None
+                    return None
+
+                # present item as a dictionary
+                return {
+                    "item_id": row[0],
+                    "name": row[1],
+                    "income": row[2],
+                    "cost": row[3],
+                    "description": row[4],
                 }
-                for r in rows
-            ]
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
 
+    def search_item_by_name(self, name: str) -> dict[str, Any] | None:
 
-def read_item(item_id: int) -> dict[str, Any] | None:
+        # establish connection with db
+        try:
+            with engine.connect() as conn:
+                print("Connection established")
 
-    # establish connection with db
-    try:
-        with engine.connect() as conn:
-            print("Connection established")
-
-            # get item with matching item_id
-            result = conn.execute(select(items).where(items.c.item_id == item_id))
+                # get item with matching name
+                result = conn.execute(select(items).where(items.c.name == name))
 
             row = result.fetchone()
 
-            if row is None:  # item not found -> return None
+            if row is None:
                 return None
 
             # present item as a dictionary
@@ -83,135 +115,108 @@ def read_item(item_id: int) -> dict[str, Any] | None:
                 "cost": row[3],
                 "description": row[4],
             }
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
 
+    def update_item(self, item_id: int, data: dict) -> int:
 
-def search_item_by_name(name: str) -> dict[str, Any] | None:
+        for key in data:
+            if key not in ALLOWED_KEY:
+                raise FieldIsInvalidError
 
-    # establish connection with db
-    try:
-        with engine.connect() as conn:
-            print("Connection established")
-
-            # get item with matching name
-            result = conn.execute(select(items).where(items.c.name == name))
-
-        row = result.fetchone()
-
-        if row is None:
-            return None
-
-        # present item as a dictionary
-        return {
-            "item_id": row[0],
-            "name": row[1],
-            "income": row[2],
-            "cost": row[3],
-            "description": row[4],
-        }
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
-
-
-def update_item(item_id: int, data: dict) -> int:
-
-    for key in data:
-        if key not in ALLOWED_KEY:
-            raise FieldIsInvalidError
-
-    # establish connection with db
-    try:
-        with engine.begin() as conn:
-            print("Connection established")
-            result = conn.execute(
-                update(items).values(data).where(items.c.item_id == item_id)
-            )
-            return result.rowcount
-
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
-
-
-def delete_item(item_id: int) -> int:
-
-    # establish connection with db
-    try:
-        with engine.begin() as conn:
-            print("Connection established")
-            result = conn.execute(delete(items).where(items.c.item_id == item_id))
-
-            return result.rowcount
-
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
-
-
-def read_ownerships(user_id: int) -> list[dict[str, Any]]:
-    try:
-        with engine.connect() as conn:
-            print("Connection established")
-            result = conn.execute(
-                select(ownership).where(ownership.c.user_id == user_id)
-            )
-
-            rows = result.fetchall()
-            return [{"user_id": row[0], "item_id": row[1]} for row in rows]
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
-
-
-def read_ownership(user_id: int, item_id: int) -> dict[str, int] | None:
-    try:
-        with engine.connect() as conn:
-            print("Connection established")
-            result = conn.execute(
-                select(ownership).where(
-                    and_(ownership.c.user_id == user_id, ownership.c.item_id == item_id)
+        # establish connection with db
+        try:
+            with engine.begin() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    update(items).values(data).where(items.c.item_id == item_id)
                 )
-            )
+                return result.rowcount
 
-            row = result.fetchone()
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
 
-            if row is None:  # ownership not found -> return None
-                return None
+    def delete_item(self, item_id: int) -> int:
 
-            return {"user_id": row[0], "item_id": row[1]}
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
+        # establish connection with db
+        try:
+            with engine.begin() as conn:
+                print("Connection established")
+                result = conn.execute(delete(items).where(items.c.item_id == item_id))
 
+                return result.rowcount
 
-def create_ownership(user_id: int, item_id: int) -> dict[str, int]:
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
 
-    # establish connection with db
-    try:
-        with engine.begin() as conn:
-            print("Connection established")
-            result = conn.execute(
-                insert(ownership)
-                .values(user_id=user_id, item_id=item_id)
-                .returning(ownership.c.user_id, ownership.c.item_id)
-            )
-
-            row = result.fetchone()
-        return {"user_id": row[0], "item_id": row[1]} if row else {}
-
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
-
-
-def delete_ownership(user_id: int, item_id: int) -> int:
-    # establish connection with db
-    try:
-        with engine.begin() as conn:
-            print("Connection established")
-            result = conn.execute(
-                delete(ownership).where(
-                    and_(ownership.c.user_id == user_id, ownership.c.item_id == item_id)
+    def read_ownerships(self, user_id: int) -> list[dict[str, Any]]:
+        try:
+            with engine.connect() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    select(ownership).where(ownership.c.user_id == user_id)
                 )
-            )
 
-            rows_affected = result.rowcount
-            return rows_affected
-    except (SQLAlchemyError, DBAPIError):
-        raise DatabaseError
+                rows = result.fetchall()
+                return [{"user_id": row[0], "item_id": row[1]} for row in rows]
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
+
+    def read_ownership(self, user_id: int, item_id: int) -> dict[str, int] | None:
+        try:
+            with engine.connect() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    select(ownership).where(
+                        and_(
+                            ownership.c.user_id == user_id,
+                            ownership.c.item_id == item_id,
+                        )
+                    )
+                )
+
+                row = result.fetchone()
+
+                if row is None:  # ownership not found -> return None
+                    return None
+
+                return {"user_id": row[0], "item_id": row[1]}
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
+
+    def create_ownership(self, user_id: int, item_id: int) -> dict[str, int]:
+
+        # establish connection with db
+        try:
+            with engine.begin() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    insert(ownership)
+                    .values(user_id=user_id, item_id=item_id)
+                    .returning(ownership.c.user_id, ownership.c.item_id)
+                )
+
+                row = result.fetchone()
+            return {"user_id": row[0], "item_id": row[1]} if row else {}
+
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
+
+    def delete_ownership(self, user_id: int, item_id: int) -> int:
+        # establish connection with db
+        try:
+            with engine.begin() as conn:
+                print("Connection established")
+                result = conn.execute(
+                    delete(ownership).where(
+                        and_(
+                            ownership.c.user_id == user_id,
+                            ownership.c.item_id == item_id,
+                        )
+                    )
+                )
+
+                rows_affected = result.rowcount
+                return rows_affected
+        except (SQLAlchemyError, DBAPIError):
+            raise DatabaseError
