@@ -1,14 +1,11 @@
 from typing import Any
 
-from dotenv import load_dotenv
 from sqlalchemy import Engine, and_, delete, insert, select, update
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from app.domain.exceptions import DatabaseError, FieldIsInvalidError
-from app.persistence.tables import engine, items, ownership
+from app.persistence.tables import items, ownership
 
-# Load environment variables from .env file
-load_dotenv()
 ALLOWED_KEY = {"name", "cost", "income", "description"}
 
 
@@ -22,7 +19,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.begin() as conn:
+            with self.engine.begin() as conn:
                 print("Connection established")
                 result = conn.execute(
                     insert(items)
@@ -44,7 +41,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.connect() as conn:
+            with self.engine.connect() as conn:
                 print("Connection established")
 
                 # select all rows from items table
@@ -70,7 +67,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.connect() as conn:
+            with self.engine.connect() as conn:
                 print("Connection established")
 
                 # get item with matching item_id
@@ -96,7 +93,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.connect() as conn:
+            with self.engine.connect() as conn:
                 print("Connection established")
 
                 # get item with matching name
@@ -126,7 +123,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.begin() as conn:
+            with self.engine.begin() as conn:
                 print("Connection established")
                 result = conn.execute(
                     update(items).values(data).where(items.c.item_id == item_id)
@@ -140,7 +137,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.begin() as conn:
+            with self.engine.begin() as conn:
                 print("Connection established")
                 result = conn.execute(delete(items).where(items.c.item_id == item_id))
 
@@ -151,7 +148,7 @@ class ItemRepository:
 
     def read_ownerships(self, user_id: int) -> list[dict[str, Any]]:
         try:
-            with engine.connect() as conn:
+            with self.engine.connect() as conn:
                 print("Connection established")
                 result = conn.execute(
                     select(ownership).where(ownership.c.user_id == user_id)
@@ -164,7 +161,7 @@ class ItemRepository:
 
     def read_ownership(self, user_id: int, item_id: int) -> dict[str, int] | None:
         try:
-            with engine.connect() as conn:
+            with self.engine.connect() as conn:
                 print("Connection established")
                 result = conn.execute(
                     select(ownership).where(
@@ -188,7 +185,7 @@ class ItemRepository:
 
         # establish connection with db
         try:
-            with engine.begin() as conn:
+            with self.engine.begin() as conn:
                 print("Connection established")
                 result = conn.execute(
                     insert(ownership)
@@ -205,7 +202,7 @@ class ItemRepository:
     def delete_ownership(self, user_id: int, item_id: int) -> int:
         # establish connection with db
         try:
-            with engine.begin() as conn:
+            with self.engine.begin() as conn:
                 print("Connection established")
                 result = conn.execute(
                     delete(ownership).where(
