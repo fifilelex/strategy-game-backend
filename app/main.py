@@ -74,7 +74,7 @@ def user_does_not_exist_handler(
     return JSONResponse(status_code=404, content={"error": "User not found"})
 
 
-def initialize():
+def initialize() -> None:
     metadata.create_all(engine, checkfirst=True)
 
 
