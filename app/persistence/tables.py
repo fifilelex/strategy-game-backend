@@ -1,6 +1,3 @@
-from os import getenv
-
-from dotenv import load_dotenv
 from sqlalchemy import (
     Boolean,
     Column,
@@ -9,13 +6,8 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
-    create_engine,
 )
 
-load_dotenv()
-url = getenv("DATABASE_URL")
-assert url is not None
-engine = create_engine(url)
 metadata = MetaData()
 
 gamestate = Table(

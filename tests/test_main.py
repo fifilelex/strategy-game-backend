@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.domain.exceptions import (
     DatabaseError,
@@ -12,9 +11,6 @@ from app.domain.exceptions import (
     UserDoesExistError,
     UserDoesNotExistError,
 )
-from app.main import app
-
-client = TestClient(app)
 
 
 @pytest.fixture
@@ -23,7 +19,7 @@ def item():
 
 
 @pytest.fixture
-def post_item():
+def post_item(client):
     item = {"name": "Filip", "income": 40, "cost": 400, "description": ""}
     response = client.post("/api/item", json=item)
     data = response.json()
@@ -39,7 +35,7 @@ def post_item():
 
 
 @pytest.fixture
-def post_gamestate():
+def post_gamestate(client):
     gamestate = {
         "username": "fifilelex",
         "turn": 3,
@@ -61,7 +57,7 @@ def post_gamestate():
     return gamestate
 
 
-def test_create_item_duplicate(item):
+def test_create_item_duplicate(client, item):
     client.post("/api/item/", json=item)
 
     response = client.post("/api/item/", json=item)
@@ -70,17 +66,21 @@ def test_create_item_duplicate(item):
     assert response.json()["error"] == "Item with such name already exists"
 
 
-def test_create_item_db_error(item):
-    with patch("app.api.api.i_service.create_item") as mock_create:
+def test_create_item_db_error(client, item_service, item):
+    with patch.object(item_service, "create_item") as mock_create:
         mock_create.side_effect = DatabaseError
         response = client.post("/api/item/", json=item)
+        response = client.post("/api/item/", json=item)
+        print("fixture", id(item_service))
+        print(response.status_code)
+        print(response.json())
         assert response.status_code == 500
         assert response.json()["error"] == "Database error"
 
 
-def test_update_item_field_is_empty(post_item):
+def test_update_item_field_is_empty(client, item_service, post_item):
     item_id = post_item["item_id"]
-    with patch("app.api.api.i_service.update_item") as mock_update:
+    with patch.object(item_service, "update_item") as mock_update:
         mock_update.side_effect = FieldIsEmptyError
         empty_item = {}
         response = client.patch(
@@ -90,35 +90,45 @@ def test_update_item_field_is_empty(post_item):
         assert response.json()["error"] == "No fields to update"
 
 
-def test_create_ownership_already_bought():
-    with patch("app.api.api.p_service.buy_item") as mock_create:
+def test_create_ownership_already_bought(
+    client, post_gamestate, post_item, purchase_service
+):
+    item_id = post_item["item_id"]
+    user_id = post_gamestate["user_id"]
+    with patch.object(purchase_service.item_repo, "read_ownership") as mock_create:
         mock_create.side_effect = ItemAlreadyBoughtError
-        ownership_data = {"user_id": 4, "item_id": 6}
+        ownership_data = {"user_id": user_id, "item_id": item_id}
         response = client.post("/api/user/ownership", json=ownership_data)
         assert response.status_code == 409
         assert response.json()["error"] == "Item already bought"
 
 
-def test_delete_ownership_item_not_owned():
-    with patch("app.api.api.p_service.delete_ownership") as mock_delete:
+def test_delete_ownership_item_not_owned(
+    client, post_gamestate, post_item, purchase_service
+):
+    item_id = post_item["item_id"]
+    user_id = post_gamestate["user_id"]
+    with patch.object(purchase_service, "delete_ownership") as mock_delete:
         mock_delete.side_effect = ItemNotOwnedError
-        ownership_data = {"user_id": 4, "item_id": 4}
+        ownership_data = {"user_id": user_id, "item_id": item_id}
         response = client.request("delete", "/api/user/ownership", json=ownership_data)
         assert response.status_code == 404
         assert response.json()["error"] == "Item not owned"
 
 
-def test_create_ownership_no_money():
-    with patch("app.api.api.p_service.buy_item") as mock_create:
+def test_create_ownership_no_money(client, post_gamestate, post_item, purchase_service):
+    item_id = post_item["item_id"]
+    user_id = post_gamestate["user_id"]
+    with patch.object(purchase_service, "buy_item") as mock_create:
         mock_create.side_effect = NotEnoughMoneyError
-        ownership_data = {"user_id": 4, "item_id": 6}
+        ownership_data = {"user_id": user_id, "item_id": item_id}
         response = client.post("/api/user/ownership", json=ownership_data)
         assert response.status_code == 409
         assert response.json()["error"] == "User has not enough money"
 
 
-def test_create_gamestate(post_gamestate):
-    with patch("app.api.api.g_service.create_gamestate") as mock_create:
+def test_create_gamestate(client, post_gamestate, game_service):
+    with patch.object(game_service, "create_gamestate") as mock_create:
         mock_create.side_effect = UserDoesExistError
         post_gamestate.pop("user_id")
         response = client.post("/api/user/", json=post_gamestate)
@@ -126,8 +136,8 @@ def test_create_gamestate(post_gamestate):
         assert response.json()["error"] == "User already exists"
 
 
-def test_delete_gamestate():
-    with patch("app.api.api.g_service.create_gamestate") as mock_create:
+def test_delete_gamestate(client, game_service):
+    with patch.object(game_service, "create_gamestate") as mock_create:
         mock_create.side_effect = UserDoesNotExistError
 
         response = client.request("delete", "/api/user/", params={"user_id": 4})
