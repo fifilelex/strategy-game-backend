@@ -1,16 +1,12 @@
 import pytest
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-client = TestClient(app)
 
 
 @pytest.fixture
-def post_item():
+def post_item(client):
     item = {"name": "Filip", "income": 40, "cost": 400, "description": ""}
     response = client.post("/api/item", json=item)
     data = response.json()
+    print(data)
     item_id = data["Item_created"]
     item_returned = {
         "item_id": item_id,
@@ -24,7 +20,7 @@ def post_item():
 
 
 @pytest.fixture
-def post_gamestate():
+def post_gamestate(client):
     gamestate = {
         "username": "fifilelex",
         "turn": 3,
@@ -46,14 +42,14 @@ def post_gamestate():
     return gamestate
 
 
-def test_read_items():
+def test_read_items(client):
 
     response = client.get("/api/items")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_create_item():
+def test_create_item(client):
     item = {"name": "Filip", "income": 40, "cost": 400, "description": ""}
     response = client.post("/api/item/", json=item)
     data = response.json()
@@ -63,7 +59,7 @@ def test_create_item():
     assert isinstance(data["Item_created"], int)
 
 
-def test_create_item_no_name():
+def test_create_item_no_name(client):
     item = {"income": 40, "cost": 400, "description": ""}
     response = client.post("/api/item/", json=item)
 
@@ -76,7 +72,7 @@ def test_create_item_no_name():
     assert data["detail"][0]["type"] == "missing"
 
 
-def test_create_item_empty_name():
+def test_create_item_empty_name(client):
     item = {"name": "", "income": 40, "cost": 400, "description": ""}
     response = client.post("/api/item/", json=item)
     assert response.status_code == 422
@@ -88,7 +84,7 @@ def test_create_item_empty_name():
     assert data["detail"][0]["type"] == "string_too_short"
 
 
-def test_create_item_negative_income():
+def test_create_item_negative_income(client):
     item = {"name": "Filip", "income": -40, "cost": 400, "description": ""}
     response = client.post("/api/item/", json=item)
     assert response.status_code == 422
@@ -99,7 +95,7 @@ def test_create_item_negative_income():
     assert data["detail"][0]["type"] == "greater_than"
 
 
-def test_create_item_changed_field():
+def test_create_item_changed_field(client):
     item = {"name": "Filip", "income": 40, "cost": 400, "other_field": "hey"}
     response = client.post("/api/item/", json=item)
     assert response.status_code == 422
@@ -110,7 +106,7 @@ def test_create_item_changed_field():
     assert data["detail"][0]["type"] == "extra_forbidden"
 
 
-def test_create_item_additional_field():
+def test_create_item_additional_field(client):
     item = {
         "name": "Filip",
         "income": 40,
@@ -127,7 +123,7 @@ def test_create_item_additional_field():
     assert data["detail"][0]["type"] == "extra_forbidden"
 
 
-def test_read_item_does_not_exist():
+def test_read_item_does_not_exist(client):
 
     response = client.get("/api/item/2137")
     assert response.status_code == 404
@@ -137,7 +133,7 @@ def test_read_item_does_not_exist():
     assert data["error"] == "Item not found"
 
 
-def test_read_item_id_string():
+def test_read_item_id_string(client):
     response = client.get("/api/item/chivas")
     assert response.status_code == 404
     data = response.json()
@@ -146,7 +142,7 @@ def test_read_item_id_string():
     assert data["detail"] == "Not Found"
 
 
-def test_read_item(post_item):
+def test_read_item(client, post_item):
     item = post_item
 
     response = client.get(f"/api/item/{item['item_id']}")
@@ -159,7 +155,7 @@ def test_read_item(post_item):
     assert item["description"] == data["description"]
 
 
-def test_update_item(post_item):
+def test_update_item(client, post_item):
     item = post_item
     item["name"] = "Kristof"
     item["description"] = "Columbus"
@@ -176,7 +172,7 @@ def test_update_item(post_item):
     assert item["description"] == data["description"]
 
 
-def test_delete_item(post_item):
+def test_delete_item(client, post_item):
     item = post_item
     item_id = item["item_id"]
     response = client.delete("/api/item/", params={"item_id": item_id})
@@ -184,7 +180,7 @@ def test_delete_item(post_item):
     assert response.status_code == 200
 
 
-def test_read_gamestate(post_gamestate):
+def test_read_gamestate(client, post_gamestate):
     gamestate = post_gamestate
     user_id = gamestate["user_id"]
     response = client.get(f"/api/user/{user_id}")
@@ -197,7 +193,7 @@ def test_read_gamestate(post_gamestate):
     assert gamestate["is_active"] == data["is_active"]
 
 
-def test_patch_gamestate(post_gamestate):
+def test_patch_gamestate(client, post_gamestate):
     gamestate = post_gamestate
     user_id = gamestate["user_id"]
     gamestate["turn"] = 94
@@ -207,7 +203,7 @@ def test_patch_gamestate(post_gamestate):
     assert response.status_code == 200
 
 
-def test_delete_gamestate(post_gamestate):
+def test_delete_gamestate(client, post_gamestate):
     gameestate = post_gamestate
     user_id = gameestate["user_id"]
     response = client.delete("/api/user/", params={"user_id": user_id})
@@ -215,7 +211,7 @@ def test_delete_gamestate(post_gamestate):
     assert response.status_code == 200
 
 
-def test_create_ownership(post_gamestate, post_item):
+def test_create_ownership(client, post_gamestate, post_item):
     user_id = post_gamestate["user_id"]
     item_id = post_item["item_id"]
 
@@ -225,7 +221,7 @@ def test_create_ownership(post_gamestate, post_item):
     assert response.status_code == 200
 
 
-def test_read_ownership(post_gamestate, post_item):
+def test_read_ownership(client, post_gamestate, post_item):
     user_id = post_gamestate["user_id"]
     item_id = post_item["item_id"]
 
@@ -240,7 +236,7 @@ def test_read_ownership(post_gamestate, post_item):
     assert response.status_code == 200
 
 
-def test_read_ownerships(post_gamestate, post_item):
+def test_read_ownerships(client, post_gamestate, post_item):
     user_id = post_gamestate["user_id"]
     item_id = post_item["item_id"]
 
@@ -253,7 +249,7 @@ def test_read_ownerships(post_gamestate, post_item):
     assert data == [{"user_id": user_id, "item_id": item_id}]
 
 
-def test_delete_ownership(post_gamestate, post_item):
+def test_delete_ownership(client, post_gamestate, post_item):
     user_id = post_gamestate["user_id"]
     item_id = post_item["item_id"]
 
