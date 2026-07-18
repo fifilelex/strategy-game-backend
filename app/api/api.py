@@ -18,7 +18,7 @@ def create_router(
     game_service: GameService,
     item_service: ItemService,
     purchase_service: PurchaseService,
-):
+) -> APIRouter:
     router = APIRouter()
 
     @router.post("/api/item/")

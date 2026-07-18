@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.domain.exceptions import (
@@ -14,7 +14,7 @@ from app.domain.exceptions import (
 )
 
 
-def create_handlers(app):
+def create_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(ItemDoesExistError)
     def item_does_exist_handler(
