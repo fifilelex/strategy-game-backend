@@ -26,7 +26,7 @@ class TestGameRepository:
         return model
 
     def test_read_gamestate_db_error(self, game_repository):
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
 
             with pytest.raises(DatabaseError):
@@ -52,7 +52,7 @@ class TestGameRepository:
         assert model["is_active"] == db_model["is_active"]
 
     def test_search_gamestate_by_name_db_error(self, game_repository):
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
 
@@ -67,7 +67,7 @@ class TestGameRepository:
                 game_repository.search_gamestate_by_name("katy", 5)
 
     def test_create_gamestate_db_error(self, game_repository):
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
 
@@ -104,7 +104,7 @@ class TestGameRepository:
         model = user
         user_id = model["user_id"]
         data = {"username": "Cris"}
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
             with pytest.raises(DatabaseError):
@@ -118,7 +118,7 @@ class TestGameRepository:
     def test_delete_gamestate_db_error(self, user, game_repository):
         model = user
         user_id = model["user_id"]
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
             with pytest.raises(DatabaseError):
@@ -130,7 +130,7 @@ class TestGameRepository:
                 game_repository.delete_gamestate(user_id)
 
     def test_create_gamestate_row_is_none(self, game_repository):
-        with patch.object(game_repository.engine, "connect") as mock_connect:
+        with patch.object(game_repository.session_factory, "begin") as mock_connect:
             mock_conn = mock_connect.return_value.__enter__.return_value
             mock_conn.execute.return_value.fetchone.return_value = None
 

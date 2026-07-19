@@ -62,7 +62,9 @@ class TestGameService:
             game_service.create_gamestate(game)
 
     def test_create_gamestate_db_error(self, game_service):
-        with patch.object(game_service.game_repo.engine, "begin") as mock_connect:
+        with patch.object(
+            game_service.game_repo.session_factory, "begin"
+        ) as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
             game = GameStateCreate(
                 username="krzys", turn=1, money=424, income=100, is_active=True
@@ -76,7 +78,9 @@ class TestGameService:
                 game_service.create_gamestate(game)
 
     def test_create_gamestate_none(self, game_service):
-        with patch.object(game_service.game_repo.engine, "begin") as mock_connect:
+        with patch.object(
+            game_service.game_repo.session_factory, "begin"
+        ) as mock_connect:
             mock_conn = mock_connect.return_value.__enter__.return_value
             mock_conn.execute.return_value.fetchone.return_value = None
 
@@ -102,7 +106,9 @@ class TestGameService:
 
     def test_update_gamestate_db_error(self, user_id, game_service):
         uid = user_id
-        with patch.object(game_service.game_repo.engine, "begin") as mock_connect:
+        with patch.object(
+            game_service.game_repo.session_factory, "begin"
+        ) as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
             game = GameStateUpdate(username="kazik", money=999)
             with pytest.raises(DatabaseError):
@@ -114,7 +120,9 @@ class TestGameService:
                 game_service.update_gamestate(uid, game)
 
     def test_delete_gamestate_no_user(self, game_service):
-        with patch.object(game_service.game_repo.engine, "begin") as mock_connect:
+        with patch.object(
+            game_service.game_repo.session_factory, "begin"
+        ) as mock_connect:
             mock_conn = mock_connect.return_value.__enter__.return_value
             mock_conn.execute.return_value.fetchone.return_value = None
 
@@ -123,7 +131,9 @@ class TestGameService:
 
     def test_delete_gamestate_db_error(self, user_id, game_service):
         uid = user_id
-        with patch.object(game_service.game_repo.engine, "begin") as mock_connect:
+        with patch.object(
+            game_service.game_repo.session_factory, "begin"
+        ) as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
             with pytest.raises(DatabaseError):
                 game_service.delete_gamestate(uid)

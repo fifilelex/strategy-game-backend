@@ -44,7 +44,7 @@ class TestItemRepository:
         return model
 
     def test_create_item_failed(self, item_repository):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             mock_conn = mock_connect.return_value.__enter__.return_value
             mock_conn.execute.return_value.fetchone.return_value = None
             assert (
@@ -53,7 +53,7 @@ class TestItemRepository:
             )
 
     def test_create_item_db_error(self, item_repository):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
 
@@ -68,13 +68,13 @@ class TestItemRepository:
                 item_repository.create_item("Dockyard", 1000, 100000, "Produces ships")
 
     def test_read_items_empty(self, item_repository):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             mock_conn = mock_connect.return_value.__enter__.return_value
             mock_conn.execute.return_value.fetchall.return_value = None
             assert item_repository.read_items() == []
 
     def test_read_items_db_error(self, item_repository):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
 
             mock_connect.side_effect = SQLAlchemyError
 
@@ -88,7 +88,7 @@ class TestItemRepository:
                 item_repository.read_items()
 
     def test_read_item_db_error(self, item_repository, post_item):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             item_id = post_item
             mock_connect.side_effect = SQLAlchemyError
 
@@ -102,7 +102,7 @@ class TestItemRepository:
                 item_repository.read_item(item_id)
 
     def test_search_item_by_name_db_error(self, item_repository, post_item_data):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             item_name = post_item_data["name"]
             mock_connect.side_effect = SQLAlchemyError
 
@@ -123,7 +123,7 @@ class TestItemRepository:
             item_repository.update_item(item_id, data)
 
     def test_update_item_db_error(self, item_repository, post_item, post_item_data):
-        with patch.object(item_repository.engine, "begin") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
             item_id = post_item
             data = post_item_data
@@ -137,7 +137,7 @@ class TestItemRepository:
                 item_repository.update_item(item_id, data)
 
     def test_delete_item_db_error(self, item_repository, post_item):
-        with patch.object(item_repository.engine, "begin") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             mock_connect.side_effect = SQLAlchemyError
             item_id = post_item
             with pytest.raises(DatabaseError):
@@ -150,7 +150,7 @@ class TestItemRepository:
                 item_repository.delete_item(item_id)
 
     def test_read_ownerships_db_error(self, item_repository, user):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             user_id = user["user_id"]
             mock_connect.side_effect = SQLAlchemyError
             with pytest.raises(DatabaseError):
@@ -163,7 +163,7 @@ class TestItemRepository:
                 item_repository.read_ownerships(user_id)
 
     def test_read_ownership_db_error(self, item_repository, user, post_item):
-        with patch.object(item_repository.engine, "connect") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             user_id = user["user_id"]
             mock_connect.side_effect = SQLAlchemyError
             item_id = post_item
@@ -177,7 +177,7 @@ class TestItemRepository:
                 item_repository.read_ownership(user_id, item_id)
 
     def test_create_ownership_db_error(self, item_repository, user, post_item):
-        with patch.object(item_repository.engine, "begin") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             user_id = user["user_id"]
             mock_connect.side_effect = SQLAlchemyError
             item_id = post_item
@@ -191,7 +191,7 @@ class TestItemRepository:
                 item_repository.create_ownership(user_id, item_id)
 
     def test_delete_ownership_db_error(self, item_repository, user, post_item):
-        with patch.object(item_repository.engine, "begin") as mock_connect:
+        with patch.object(item_repository.session_factory, "begin") as mock_connect:
             user_id = user["user_id"]
             mock_connect.side_effect = SQLAlchemyError
             item_id = post_item
