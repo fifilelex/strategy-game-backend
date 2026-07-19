@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import Engine, and_, delete, insert, select, update
+from sqlalchemy import CursorResult, Engine, and_, delete, insert, select, update
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
 
 from app.domain.exceptions import DatabaseError, FieldIsInvalidError
 from app.persistence.tables import items, ownership
@@ -12,16 +13,14 @@ ALLOWED_KEY = {"name", "cost", "income", "description"}
 class ItemRepository:
     def __init__(self, engine: Engine):
         self.engine = engine
+        self.session_factory = sessionmaker(engine)
 
     def create_item(
         self, name: str, income: int, cost: int, description: str
     ) -> int | None:
-
-        # establish connection with db
         try:
-            with self.engine.begin() as conn:
-                print("Connection established")
-                result = conn.execute(
+            with self.session_factory.begin() as session:
+                result = session.execute(
                     insert(items)
                     .values(
                         name=name, income=income, cost=cost, description=description
@@ -32,20 +31,15 @@ class ItemRepository:
                 row = result.fetchone()
                 if row is None:
                     return None
-            return row.item_id
+                return row.item_id
 
         except (SQLAlchemyError, DBAPIError):
             raise DatabaseError
 
     def read_items(self) -> list[dict[str, Any]]:
-
-        # establish connection with db
         try:
-            with self.engine.connect() as conn:
-                print("Connection established")
-
-                # select all rows from items table
-                result = conn.execute(select(items))
+            with self.session_factory.begin() as session:
+                result = session.execute(select(items))
                 rows = result.fetchall()
                 if rows is None:
                     return []
@@ -64,14 +58,14 @@ class ItemRepository:
             raise DatabaseError
 
     def read_item(self, item_id: int) -> dict[str, Any] | None:
-
-        # establish connection with db
         try:
-            with self.engine.connect() as conn:
+            with self.session_factory.begin() as session:
                 print("Connection established")
 
                 # get item with matching item_id
-                result = conn.execute(select(items).where(items.c.item_id == item_id))
+                result = session.execute(
+                    select(items).where(items.c.item_id == item_id)
+                )
 
                 row = result.fetchone()
 
@@ -90,28 +84,26 @@ class ItemRepository:
             raise DatabaseError
 
     def search_item_by_name(self, name: str) -> dict[str, Any] | None:
-
-        # establish connection with db
         try:
-            with self.engine.connect() as conn:
+            with self.session_factory.begin() as session:
                 print("Connection established")
 
                 # get item with matching name
-                result = conn.execute(select(items).where(items.c.name == name))
+                result = session.execute(select(items).where(items.c.name == name))
 
-            row = result.fetchone()
+                row = result.fetchone()
 
-            if row is None:
-                return None
+                if row is None:
+                    return None
 
-            # present item as a dictionary
-            return {
-                "item_id": row[0],
-                "name": row[1],
-                "income": row[2],
-                "cost": row[3],
-                "description": row[4],
-            }
+                # present item as a dictionary
+                return {
+                    "item_id": row[0],
+                    "name": row[1],
+                    "income": row[2],
+                    "cost": row[3],
+                    "description": row[4],
+                }
         except (SQLAlchemyError, DBAPIError):
             raise DatabaseError
 
@@ -121,12 +113,14 @@ class ItemRepository:
             if key not in ALLOWED_KEY:
                 raise FieldIsInvalidError
 
-        # establish connection with db
         try:
-            with self.engine.begin() as conn:
+            with self.session_factory.begin() as session:
                 print("Connection established")
-                result = conn.execute(
-                    update(items).values(data).where(items.c.item_id == item_id)
+                result = cast(
+                    CursorResult,
+                    session.execute(
+                        update(items).values(data).where(items.c.item_id == item_id)
+                    ),
                 )
                 return result.rowcount
 
@@ -134,12 +128,13 @@ class ItemRepository:
             raise DatabaseError
 
     def delete_item(self, item_id: int) -> int:
-
-        # establish connection with db
         try:
-            with self.engine.begin() as conn:
-                print("Connection established")
-                result = conn.execute(delete(items).where(items.c.item_id == item_id))
+            with self.session_factory.begin() as session:
+
+                result = cast(
+                    CursorResult,
+                    session.execute(delete(items).where(items.c.item_id == item_id)),
+                )
 
                 return result.rowcount
 
@@ -148,9 +143,8 @@ class ItemRepository:
 
     def read_ownerships(self, user_id: int) -> list[dict[str, Any]]:
         try:
-            with self.engine.connect() as conn:
-                print("Connection established")
-                result = conn.execute(
+            with self.session_factory.begin() as session:
+                result = session.execute(
                     select(ownership).where(ownership.c.user_id == user_id)
                 )
 
@@ -161,9 +155,8 @@ class ItemRepository:
 
     def read_ownership(self, user_id: int, item_id: int) -> dict[str, int] | None:
         try:
-            with self.engine.connect() as conn:
-                print("Connection established")
-                result = conn.execute(
+            with self.session_factory.begin() as session:
+                result = session.execute(
                     select(ownership).where(
                         and_(
                             ownership.c.user_id == user_id,
@@ -183,37 +176,35 @@ class ItemRepository:
 
     def create_ownership(self, user_id: int, item_id: int) -> dict[str, int]:
 
-        # establish connection with db
         try:
-            with self.engine.begin() as conn:
-                print("Connection established")
-                result = conn.execute(
+            with self.session_factory.begin() as session:
+                result = session.execute(
                     insert(ownership)
                     .values(user_id=user_id, item_id=item_id)
                     .returning(ownership.c.user_id, ownership.c.item_id)
                 )
 
                 row = result.fetchone()
-            return {"user_id": row[0], "item_id": row[1]} if row else {}
+                return {"user_id": row[0], "item_id": row[1]} if row else {}
 
         except (SQLAlchemyError, DBAPIError):
             raise DatabaseError
 
     def delete_ownership(self, user_id: int, item_id: int) -> int:
-        # establish connection with db
         try:
-            with self.engine.begin() as conn:
-                print("Connection established")
-                result = conn.execute(
-                    delete(ownership).where(
-                        and_(
-                            ownership.c.user_id == user_id,
-                            ownership.c.item_id == item_id,
+            with self.session_factory.begin() as session:
+                result = cast(
+                    CursorResult,
+                    session.execute(
+                        delete(ownership).where(
+                            and_(
+                                ownership.c.user_id == user_id,
+                                ownership.c.item_id == item_id,
+                            )
                         )
-                    )
+                    ),
                 )
 
-                rows_affected = result.rowcount
-                return rows_affected
+                return result.rowcount
         except (SQLAlchemyError, DBAPIError):
             raise DatabaseError
